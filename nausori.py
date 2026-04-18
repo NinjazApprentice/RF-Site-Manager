@@ -17,7 +17,7 @@ SITE_MAP = {
     "Natovi": "V0528", "Nausori Airport": "V0091", "Nausori Ex": "V-NAU", "Nausori Market": "V0463",
     "Nausori Town": "V0265", "Navuso": "V0250", "Nayavu": "V0234", "Noco": "V0155",
     "Raralevu": "V0108", "Ross St": "V0464", "Rt Cakobau": "V0436", "Sawani": "V0137",
-    "Taulevu": "V0233", "Tavuya": "V0246", "Tonia": "Verata": "V0198", "Vione Gau": "V0222",
+    "Taulevu": "V0233", "Tavuya": "V0246", "Tonia": "Ver", "Verata": "V0198", "Vione Gau": "V0222",
     "Viria": "V0495", "Visama": "V0479", "Vuci": "V0389", "Vuci South": "V0139",
     "Vunidawa": "V0111", "Vunikawai": "V0042", "Vunimono NFA": "V0358", "Vusuya": "V0312",
     "Waidalice": "V0472", "Waila": "V-WAI", "Waila Housing": "V0544", "Waimaro": "V0521",
