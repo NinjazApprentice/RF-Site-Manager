@@ -35,7 +35,7 @@ else:
     df = pd.DataFrame(columns=["Location", "Site ID", "Work Done", "Status", "Timestamp"])
 
 st.set_page_config(page_title="RF Site Manager", layout="wide")
-st.title("🛰️ RF Field Work Manager")
+st.title("🛰️ Nausori")
 
 # --- SIDEBAR NAVIGATION ---
 mode = st.sidebar.radio("Mode", ["Add New Activity", "Edit Existing Activity"])
