@@ -54,13 +54,16 @@ except Exception as e:
 raw_data = worksheet.get_all_values()
 headers = ["Location", "Site ID", "Work Done", "Status", "Timestamp"]
 
-# If sheet is brand new or completely blank, build headers immediately
 if len(raw_data) <= 1:
     df = pd.DataFrame(columns=headers)
     if len(raw_data) == 0:
         worksheet.append_row(headers)
 else:
+    # Build dataframe using the headers found in row 1
     df = pd.DataFrame(raw_data[1:], columns=raw_data[0])
+    
+    # CRITICAL FIX: Clean up columns to prevent KeyErrors from stray spaces or casing
+    df.columns = df.columns.str.strip().str.title()
 
 # --- SIDEBAR: INPUT ENTRY ---
 st.sidebar.header("Log Activity")
@@ -77,7 +80,6 @@ if submit and work:
     st.rerun()
 
 # --- MAIN DASHBOARD LAYOUT ---
-# Changed layout distribution so tools are highly visible on all screen sizes
 col_main, col_tools = st.columns([2, 1])
 
 with col_main:
@@ -90,8 +92,8 @@ with col_main:
 with col_tools:
     st.subheader("🛠️ Quick Actions")
     
-    # Check if there are tasks to update (even if dataframe evaluation acts tricky)
-    if len(df) > 0:
+    # Double check that we actually have the required headers loaded
+    if len(df) > 0 and "Status" in df.columns:
         # --- 1. UPDATE TASK STATUS ---
         st.markdown("### **Update Task Status**")
         pending_tasks = df[df["Status"] != "Completed"]
@@ -122,11 +124,9 @@ with col_tools:
         
         if st.button("Archive Completed Tasks"):
             if not completed_tasks.empty:
-                # Append rows to Archive tab
                 for _, row in completed_tasks.iterrows():
                     archive_sheet.append_row(row.tolist())
                 
-                # Filter out completed tasks and reset main sheet matrix
                 incomplete_tasks = df[df["Status"] != "Completed"]
                 worksheet.clear()
                 worksheet.append_row(headers)
@@ -139,4 +139,4 @@ with col_tools:
             else:
                 st.info("No completed tasks found to archive.")
     else:
-        st.write("Add records to unlock Quick Actions panel.")
+        st.write("Add records with standard headers to unlock panel.")
