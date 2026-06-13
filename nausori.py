@@ -4,7 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import json
 
-# 1. DATABASE MAPPING (Your Nausori Site Database)
+# 1. DATABASE MAPPING
 SITE_MAP = {
     "Babavoce": "V0177", "Bau Island": "V0116", "Bau Landing": "V0575", "Bau Rd": "V0465",
     "Baulevu": "V0217", "Bureta": "V0552", "Buretu": "V0156", "Colo-I-Suva": "V0584",
@@ -28,52 +28,28 @@ SITE_MAP = {
 st.set_page_config(page_title="RF Live Log", layout="wide")
 st.title("🛰️ RF Field Logs (Direct Cloud Connection)")
 
-# --- NEW AUTHENTICATION BLOCK (OVERWRITTEN FOR RAW_JSON) ---
+# --- AUTHENTICATION ---
 scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
 try:
-    # Read the raw text string from Secrets
     raw_json_string = st.secrets["raw_json"]
-    
-    # Convert it back into a Python dictionary
     secret_creds = json.loads(raw_json_string)
-    
-    # Authenticate with Google
     creds = Credentials.from_service_account_info(secret_creds, scopes=scopes)
     gc = gspread.authorize(creds)
     
-    # Open your sheet (Matches your Google Sheet name exactly)
+    # Open primary sheet
     sh = gc.open("RF_Work_Log")
     worksheet = sh.get_worksheet(0)
+    
+    # Safely connect or create the background Archive tab
+    try:
+        archive_sheet = sh.worksheet("RF_Archive")
+    except gspread.exceptions.WorksheetNotFound:
+        archive_sheet = sh.add_worksheet(title="RF_Archive", rows="1000", cols="5")
+        archive_sheet.append_row(["Location", "Site ID", "Work Done", "Status", "Timestamp"])
+        
 except Exception as e:
     st.error(f"Connection setup missing or incorrect: {e}")
     st.stop()
 
-# --- READ LIVE DATA ---
-raw_data = worksheet.get_all_values()
-if len(raw_data) > 0:
-    df = pd.DataFrame(raw_data[1:], columns=raw_data[0])
-else:
-    df = pd.DataFrame(columns=["Location", "Site ID", "Work Done", "Status", "Timestamp"])
-    worksheet.append_row(["Location", "Site ID", "Work Done", "Status", "Timestamp"])
-
-# --- SIDEBAR: INPUT ---
-st.sidebar.header("Log Activity")
-with st.sidebar.form("entry_form", clear_on_submit=True):
-    site = st.selectbox("Site Name", sorted(list(SITE_MAP.keys())))
-    work = st.text_area("Work Details")
-    status = st.selectbox("Status", ["Planned", "In Progress", "Completed"])
-    submit = st.form_submit_button("Sync Online")
-
-if submit and work:
-    ts = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
-    worksheet.append_row([site, SITE_MAP[site], work, status, ts])
-    st.success(f"Successfully posted log for {site}")
-    st.rerun()
-
-# --- MAIN SCREEN VIEW ---
-st.subheader("📋 Cloud Activity Feed")
-if not df.empty:
-    st.dataframe(df.iloc[::-1], use_container_width=True, hide_index=True)
-else:
-    st.info("No logs present. Start adding data from the sidebar.")
+# ---
