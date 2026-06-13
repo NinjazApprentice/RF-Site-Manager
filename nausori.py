@@ -85,7 +85,7 @@ if submit and work:
 
 st.sidebar.markdown("---")
 
-# --- SECTION 2: QUICK ACTIONS (UPDATE & ARCHIVE) ---
+# --- SECTION 2: QUICK ACTIONS (UPDATE, DELETE & ARCHIVE) ---
 if len(df) > 0:
     st.sidebar.header("Quick Actions")
     
@@ -112,8 +112,29 @@ if len(df) > 0:
         st.sidebar.info("No active tasks to update.")
 
     st.sidebar.markdown("---")
+
+    # 2. NEW: Delete Specific Completed Tasks Directly
+    st.sidebar.subheader("🗑️ Delete Completed Task")
+    completed_tasks_only = df[df["Status"] == "Completed"]
+
+    if not completed_tasks_only.empty:
+        delete_idx = st.sidebar.selectbox(
+            "Select Completed Task to Delete",
+            completed_tasks_only.index,
+            format_func=lambda x: f"{df.iloc[x]['Location']}: {df.iloc[x]['Work Done'][:15]}..."
+        )
+        
+        if st.sidebar.button("❌ Permanently Delete Row"):
+            sheet_row = int(delete_idx) + 2
+            worksheet.delete_rows(sheet_row)
+            st.sidebar.error("Row deleted from cloud spreadsheet!")
+            st.rerun()
+    else:
+        st.sidebar.info("No completed tasks ready to delete.")
+
+    st.sidebar.markdown("---")
     
-    # 2. Archive Completed Tasks
+    # 3. Archive Completed Tasks Bulk
     st.sidebar.subheader("📦 Data Management")
     completed_tasks = df[df["Status"] == "Completed"]
     
