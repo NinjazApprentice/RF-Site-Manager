@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
+import json
 
-# 1. DATABASE MAPPING
+# 1. DATABASE MAPPING (Your Nausori Site Database)
 SITE_MAP = {
     "Babavoce": "V0177", "Bau Island": "V0116", "Bau Landing": "V0575", "Bau Rd": "V0465",
     "Baulevu": "V0217", "Bureta": "V0552", "Buretu": "V0156", "Colo-I-Suva": "V0584",
@@ -27,16 +28,21 @@ SITE_MAP = {
 st.set_page_config(page_title="RF Live Log", layout="wide")
 st.title("🛰️ RF Field Logs (Direct Cloud Connection)")
 
-# --- AUTHENTICATION ---
+# --- NEW AUTHENTICATION BLOCK (OVERWRITTEN FOR RAW_JSON) ---
 scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
 
-# Pulls secure credentials safely from Streamlit Cloud Secrets
 try:
-    secret_creds = dict(st.secrets["gcp_service_account"])
+    # Read the raw text string from Secrets
+    raw_json_string = st.secrets["raw_json"]
+    
+    # Convert it back into a Python dictionary
+    secret_creds = json.loads(raw_json_string)
+    
+    # Authenticate with Google
     creds = Credentials.from_service_account_info(secret_creds, scopes=scopes)
     gc = gspread.authorize(creds)
     
-    # Open your sheet (Change 'RF_Work_Log' to match your sheet name exactly)
+    # Open your sheet (Matches your Google Sheet name exactly)
     sh = gc.open("RF_Work_Log")
     worksheet = sh.get_worksheet(0)
 except Exception as e:
@@ -49,7 +55,6 @@ if len(raw_data) > 0:
     df = pd.DataFrame(raw_data[1:], columns=raw_data[0])
 else:
     df = pd.DataFrame(columns=["Location", "Site ID", "Work Done", "Status", "Timestamp"])
-    # Initialize sheet headers if completely empty
     worksheet.append_row(["Location", "Site ID", "Work Done", "Status", "Timestamp"])
 
 # --- SIDEBAR: INPUT ---
@@ -62,7 +67,6 @@ with st.sidebar.form("entry_form", clear_on_submit=True):
 
 if submit and work:
     ts = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
-    # Append row directly to the cloud sheet matrix
     worksheet.append_row([site, SITE_MAP[site], work, status, ts])
     st.success(f"Successfully posted log for {site}")
     st.rerun()
