@@ -4,7 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import json
 
-# 1. DATABASE MAPPING
+# 1. DATABASE MAPPING (Updated with 4 new field node sites)
 SITE_MAP = {
     "Babavoce": "V0177", "Bau Island": "V0116", "Bau Landing": "V0575", "Bau Rd": "V0465",
     "Baulevu": "V0217", "Bureta": "V0552", "Buretu": "V0156", "Colo-I-Suva": "V0584",
@@ -17,10 +17,11 @@ SITE_MAP = {
     "Nakobalevu": "V0377", "Nakorotubu": "V0338", "Namulomulo": "V0166", "Natovi": "V0528",
     "Nausori Airport": "V0091", "Nausori Ex": "V-NAU", "Nausori Market": "V0463",
     "Nausori Town": "V0265", "Navuso": "V0250", "Nayavu": "V0234", "Noco": "V0155",
-    "Raralevu": "V0108", "Ross St": "V0464", "Rt Cakobau": "V0436", "Sawani": "V0137",
-    "Taulevu": "V0233", "Tavuya": "V0246", "Tonia": "V0198", "Vione Gau": "V0222",
-    "Viria": "V0495", "Visama": "V0479", "Vuci": "V0389", "Vuci South": "V0139",
-    "Vunidawa": "V0111", "Vunikawai": "V0042", "Vunimono NFA": "V0358", "Vusuya": "V0312",
+    "QVS BTS": "V0612", "Raralevu": "V0108", "Rewa Delta BTS": "V0611", "Ross St": "V0464", 
+    "Rt Cakobau": "V0436", "Sawani": "V0137", "Taulevu": "V0233", "Tavuya": "V0246", 
+    "Tonia": "V0198", "Verata": "V0609", "Vione Gau": "V0222", "Viria": "V0495", 
+    "Visama": "V0479", "Vuci": "V0389", "Vuci South": "V0139", "Vunidawa": "V0111", 
+    "Vunikawai": "V0042", "Vunimono NFA": "V0358", "Vusuya": "V0312", "Vusuya Road": "V0610",
     "Waidalice": "V0472", "Waila Housing": "V0544", "Waimaro": "V0521", "Wainibokasi": "V0339",
     "Wakaya Island": "V0050", "Wakaya Resort": "V0076", "Tokou": "V0219"
 }
@@ -100,7 +101,7 @@ if len(df) > 0:
             format_func=lambda x: f"{df.iloc[x]['Location']}: {df.iloc[x]['Work Done'][:15]}..."
         )
         
-        new_status = st.sidebar.selectbox("Change Status To", ["In Progress", "Completed"])
+        new_status = st.selectbox("Change Status To", ["In Progress", "Completed"])
         
         if st.sidebar.button("Confirm Status Update"):
             sheet_row = int(task_idx) + 2  
@@ -113,7 +114,7 @@ if len(df) > 0:
 
     st.sidebar.markdown("---")
 
-    # 2. NEW: Delete Specific Completed Tasks Directly
+    # 2. Delete Specific Completed Tasks Directly
     st.sidebar.subheader("🗑️ Delete Completed Task")
     completed_tasks_only = df[df["Status"] == "Completed"]
 
