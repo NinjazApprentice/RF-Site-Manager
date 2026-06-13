@@ -26,7 +26,7 @@ SITE_MAP = {
 }
 
 st.set_page_config(page_title="RF Live Log", layout="wide")
-st.title("🛰️ RF Field Logs (Direct Cloud Connection)")
+st.title("🛰️ RF Field Work Manager")
 
 # --- AUTHENTICATION ---
 scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
@@ -47,7 +47,7 @@ try:
         archive_sheet.append_row(["Location", "Site ID", "Work Done", "Status", "Timestamp"])
         
 except Exception as e:
-    st.error(f"Connection setup missing or incorrect: {e}")
+    st.error(f"Connection setup failed: {e}")
     st.stop()
 
 # --- READ LIVE DATA ---
@@ -59,71 +59,65 @@ if len(raw_data) <= 1:
     if len(raw_data) == 0:
         worksheet.append_row(headers)
 else:
-    # Build dataframe using the headers found in row 1
     df = pd.DataFrame(raw_data[1:], columns=raw_data[0])
-    
-    # CRITICAL FIX: Clean up columns to prevent KeyErrors from stray spaces or casing
     df.columns = df.columns.str.strip().str.title()
 
-# --- SIDEBAR: INPUT ENTRY ---
-st.sidebar.header("Log Activity")
+# =========================================================
+#                    SIDEBAR UTILITIES
+# =========================================================
+st.sidebar.title("🛠️ Control Panel")
+
+# --- SECTION 1: LOG NEW ACTIVITY ---
+st.sidebar.header("Log New Activity")
 with st.sidebar.form("entry_form", clear_on_submit=True):
     site = st.selectbox("Site Name", sorted(list(SITE_MAP.keys())))
     work = st.text_area("Work Details")
     status = st.selectbox("Status", ["Planned", "In Progress", "Completed"])
-    submit = st.form_submit_button("Sync Online")
+    submit = st.form_submit_button("Sync Entry to Cloud")
 
 if submit and work:
     ts = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
     worksheet.append_row([site, SITE_MAP[site], work, status, ts])
-    st.success(f"Successfully posted log for {site}")
+    st.success(f"Logged {site}!")
     st.rerun()
 
-# --- MAIN DASHBOARD LAYOUT ---
-col_main, col_tools = st.columns([2, 1])
+st.sidebar.markdown("---")
 
-with col_main:
-    st.subheader("📋 Cloud Activity Feed")
-    if not df.empty and len(raw_data) > 1:
-        st.dataframe(df.iloc[::-1], use_container_width=True, hide_index=True)
-    else:
-        st.info("No active logs found in the Google Sheet. Use the sidebar to submit your first entry!")
-
-with col_tools:
-    st.subheader("🛠️ Quick Actions")
+# --- SECTION 2: QUICK ACTIONS (UPDATE & ARCHIVE) ---
+if len(df) > 0 and "Status" in df.columns:
+    st.sidebar.header("Quick Actions")
     
-    # Double check that we actually have the required headers loaded
-    if len(df) > 0 and "Status" in df.columns:
-        # --- 1. UPDATE TASK STATUS ---
-        st.markdown("### **Update Task Status**")
-        pending_tasks = df[df["Status"] != "Completed"]
+    # 1. Update Task Status
+    st.sidebar.subheader("🔄 Update Task Status")
+    pending_tasks = df[df["Status"] != "Completed"]
+    
+    if not pending_tasks.empty:
+        task_idx = st.sidebar.selectbox(
+            "Select Active Task", 
+            pending_tasks.index, 
+            format_func=lambda x: f"{df.iloc[x]['Location']}: {df.iloc[x]['Work Done'][:15]}..."
+        )
         
-        if not pending_tasks.empty:
-            task_idx = st.selectbox(
-                "Select Task to Update", 
-                pending_tasks.index, 
-                format_func=lambda x: f"{df.iloc[x]['Location']}: {df.iloc[x]['Work Done'][:15]}..."
-            )
-            
-            new_status = st.selectbox("Change Status To", ["In Progress", "Completed"])
-            
-            if st.button("Confirm Status Update"):
-                sheet_row = int(task_idx) + 2  
-                cell_address = f"D{sheet_row}"
-                worksheet.update(range_name=cell_address, values=[[new_status]])
-                st.success("Status Updated on Cloud!")
-                st.rerun()
-        else:
-            st.info("No pending tasks available to update.")
+        new_status = st.sidebar.selectbox("Change Status To", ["In Progress", "Completed"])
+        
+        if st.sidebar.button("Confirm Status Update"):
+            sheet_row = int(task_idx) + 2  
+            cell_address = f"D{sheet_row}"
+            worksheet.update(range_name=cell_address, values=[[new_status]])
+            st.sidebar.success("Status Updated Live!")
+            st.rerun()
+    else:
+        st.sidebar.info("No active tasks to update.")
 
-        st.markdown("---")
-        
-        # --- 2. ARCHIVE COMPLETED TASKS ---
-        st.markdown("### **Cloud Data Management**")
-        completed_tasks = df[df["Status"] == "Completed"]
-        
-        if st.button("Archive Completed Tasks"):
-            if not completed_tasks.empty:
+    st.sidebar.markdown("---")
+    
+    # 2. Archive Completed Tasks
+    st.sidebar.subheader("📦 Data Management")
+    completed_tasks = df[df["Status"] == "Completed"]
+    
+    if st.sidebar.button("Archive Completed Tasks"):
+        if not completed_tasks.empty:
+            with st.spinner("Moving completed entries to archive..."):
                 for _, row in completed_tasks.iterrows():
                     archive_sheet.append_row(row.tolist())
                 
@@ -134,9 +128,21 @@ with col_tools:
                 if not incomplete_tasks.empty:
                     worksheet.append_rows(incomplete_tasks.values.tolist())
                     
-                st.warning("Completed tasks shifted to 'RF_Archive' tab.")
-                st.rerun()
-            else:
-                st.info("No completed tasks found to archive.")
-    else:
-        st.write("Add records with standard headers to unlock panel.")
+            st.sidebar.warning("Cleared down completed logs to backup.")
+            st.rerun()
+        else:
+            st.sidebar.info("No completed tasks to archive.")
+
+# =========================================================
+#                    MAIN LIVE FEED VIEW
+# =========================================================
+st.subheader("📋 Cloud Activity Feed")
+
+# Simple filter drop-down at the top of the feed layout
+filter_name = st.selectbox("Filter History by Name", ["Show All"] + sorted(list(SITE_MAP.keys())))
+display_df = df if filter_name == "Show All" else df[df["Location"] == filter_name]
+
+if not display_df.empty and len(raw_data) > 1:
+    st.dataframe(display_df.iloc[::-1], use_container_width=True, hide_index=True)
+else:
+    st.info("No logs present matching the criteria.")
